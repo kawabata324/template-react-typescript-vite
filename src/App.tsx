@@ -3,8 +3,15 @@ import reactLogo from './assets/react.svg';
 import './App.css';
 import axios from 'axios';
 
+interface Message {
+  id: number;
+  body: string;
+  created_at: string;
+  updated_at: string;
+}
+
 function App() {
-  const [testMessage, setTestMessage] = useState();
+  const [messages, setMessages] = useState<Message[]>([]);
   useEffect(() => {
     connectTest();
   }, []);
@@ -12,12 +19,14 @@ function App() {
   const connectTest = async () => {
     await axios
       .get('http://localhost:3000/test/tests/index')
-      .then((res) => setTestMessage(res.data.test))
+      .then((res) => {
+        setMessages(res.data.messages);
+      })
       .catch((e) => console.log(e));
   };
   return (
     <div className="App">
-      <p>{testMessage}</p>
+      <ul>{messages !== [] ? messages.map((message) => <li key={message.id}>{message.body}</li>) : null}</ul>
     </div>
   );
 }
