@@ -1,7 +1,7 @@
 import React, { ChangeEvent, useEffect, useState } from 'react';
-import reactLogo from './assets/react.svg';
 import './App.css';
 import axios from 'axios';
+import ActionCable from 'actioncable';
 
 interface Message {
   id: number;
@@ -13,11 +13,28 @@ interface Message {
 function App() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
+  const cable = ActionCable.createConsumer('ws://localhost:3000/cable');
+  const channel = cable.subscriptions.create('ChatChannel', {
+    connected: () => {
+      console.log('コネクト成功');
+    },
+    received: (data) => {
+      // idが同じものだったら即リターンする
+      const existingMessages = messages.filter((message) => {
+        message.id === data.message.id;
+      });
+      if (existingMessages.length !== 0) return;
+      console.log(data);
+      setMessages([...messages, data.message]);
+      setInputText('');
+    },
+  });
+
   useEffect(() => {
-    connectTest();
+    fetchMessages();
   }, []);
 
-  const connectTest = async () => {
+  const fetchMessages = async () => {
     await axios
       .get('http://localhost:3000/test/tests/index')
       .then((res) => {
@@ -31,18 +48,10 @@ function App() {
   };
 
   const clickSendMessage = async () => {
-    await axios
-      .post('http://localhost:3000/test/tests', { message: inputText })
-      .then((res) => {
-        setInputText('');
-        setMessages([...messages, res.data.message]);
-      })
-      .catch((e) => console.log(e));
+    channel.perform('speak', {
+      message: inputText,
+    });
   };
-
-  setInterval(() => {
-    connectTest();
-  }, 1000);
 
   return (
     <div className="App">
